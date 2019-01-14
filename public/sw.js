@@ -1,43 +1,29 @@
-const cacheName = 'assets-sashavilla-v1';
-const files = [
-    '/static/media/room.f840cf20.jpeg'
-];
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/3.6.1/workbox-sw.js');
 
-self.addEventListener('install', (e) => {
-    // console.log('install from sw');
-    e.waitUntil(
-        caches.open(cacheName)
-            .then((cache) => {
-                return cache.addAll(files);
+if (workbox) {
+    workbox.setConfig({ debug: false });
+    workbox.routing.registerRoute(
+        new RegExp('.*\.js'),
+        workbox.strategies.staleWhileRevalidate()
+    );
+    workbox.routing.registerRoute(
+        /.*\.css/,
+        workbox.strategies.staleWhileRevalidate({
+        cacheName: 'css-cache',
+        })
+    );
+    
+    workbox.routing.registerRoute(
+        /.*\.(?:png|jpg|jpeg|svg|gif)/,
+        workbox.strategies.cacheFirst({
+        cacheName: 'image-cache',
+        plugins: [
+            new workbox.expiration.Plugin({
+            maxEntries: 20,
+            maxAgeSeconds: 7 * 24 * 60 * 60,
             })
-    )
-});
+        ],
+        })
+    );
+}
 
-self.addEventListener('activate', (e) => {
-    e.waitUntil(
-        caches.keys().then(names => {
-            names.forEach((item) => {
-                if (item !== cacheName) {
-                    caches.delete(item);
-                }
-            })
-        })    
-    )
-})
-
-self.addEventListener('fetch', (e) => {
-    if (e.request.url.includes('room.f840cf20')) {
-        e.respondWith(
-            caches.match(e.request)
-                .then(response => {
-                    if (response) {
-                        return response;
-                    }
-                    return fetch(e.request);
-                })
-                .catch(err => {
-                    console.log('error in matching with cache');
-                })
-        )
-    }
-});
